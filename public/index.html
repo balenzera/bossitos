@@ -1,1 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Timer Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .boss-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .boss-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .boss-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .boss-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-transform: capitalize;
+        }
+
+        .boss-duration {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .timer-display {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .timer-inactive {
+            background: #f0f0f0;
+            color: #999;
+        }
+
+        .timer-active {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .timer-warning {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+            animation: pulse 1s infinite;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.5);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-death {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-death:hover {
+            background: linear-gradient(45deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-death:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .status-ready {
+            color: #27ae60;
+        }
+
+        .status-respawning {
+            color: #3498db;
+        }
+
+        .status-warning {
+            color: #e74c3c;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1000;
+            font-weight: bold;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐉 Boss Timer Tracker</h1>
+        
+        <div class="boss-grid" id="bossGrid">
+            </div>
+    </div>
+
+    <script>
+        // Definición local de los bosses para tener su duración
+        const BOSS_DATA = {
+            'Gigantus': 2 * 60 * 60,   // 2 horas
+            'Corvo': 2 * 60 * 60,      // 2 horas
+            'Quimera': 3 * 60 * 60,    // 3 horas
+            'Flonebe': 3 * 60 * 60,    // 3 horas
+            'Gyes': 4 * 60 * 60,       // 4 horas
+            'Lindwurm': 4 * 60 * 60,   // 4 horas
+            'Thrandir': 5 * 60 * 60    // 5 horas
+        };
+
+        let alertShown = {};
+
+        function formatTime(seconds) {
+            const absSeconds = Math.abs(seconds);
+            const hours = Math.floor(absSeconds / 3600);
+            const minutes = Math.floor((absSeconds % 3600) / 60);
+            const secs = absSeconds % 60;
+            
+            const sign = seconds < 0 ? '-' : '';
+
+            return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function createBossCard(boss) {
+            const bossCard = document.createElement('div');
+            bossCard.className = 'boss-card';
+            bossCard.innerHTML = `
+                <div class="boss-name">${boss.boss_name}</div>
+                <div class="boss-duration">Respawn: ${boss.respawn_duration / 3600}h</div>
+                <div class="timer-display" id="timer-${boss.boss_name}">
+                    --:--:--
+                </div>
+                <div class="button-group">
+                    <button class="button btn-death" onclick="markDeath('${boss.boss_name}', ${boss.respawn_duration})">
+                        ⚔️ Marcar Muerte
+                    </button>
+                </div>
+                <div class="status" id="status-${boss.boss_name}">
+                    Cargando...
+                </div>
+            `;
+            return bossCard;
+        }
+
+        async function fetchAndRenderTimers() {
+            try {
+                const response = await fetch('/api/timers');
+                const timers = await response.json();
+                
+                const bossGrid = document.getElementById('bossGrid');
+                bossGrid.innerHTML = '';
+
+                // Si no hay datos en la base de datos, crea los bosses por defecto
+                if (timers.length === 0) {
+                    for (const name in BOSS_DATA) {
+                        bossGrid.appendChild(createBossCard({
+                            boss_name: name,
+                            respawn_duration: BOSS_DATA[name],
+                            last_killed: null
+                        }));
+                        updateBossDisplay({
+                            boss_name: name,
+                            respawn_duration: BOSS_DATA[name],
+                            last_killed: null
+                        });
+                    }
+                } else {
+                    timers.forEach(boss => {
+                        bossGrid.appendChild(createBossCard(boss));
+                        updateBossDisplay(boss);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al obtener los timers del servidor:', error);
+                showNotification('Error al conectar con el servidor. Revisa el backend.');
+            }
+        }
+
+        function updateBossDisplay(boss) {
+            const timerDisplay = document.getElementById(`timer-${boss.boss_name}`);
+            const statusDisplay = document.getElementById(`status-${boss.boss_name}`);
+            const deathButton = document.querySelector(`[onclick="markDeath('${boss.boss_name}', ${boss.respawn_duration})"]`);
+
+            if (!timerDisplay || !statusDisplay) return;
+
+            const now = new Date();
+            const lastKilled = boss.last_killed ? new Date(boss.last_killed) : null;
+            
+            if (lastKilled) {
+                const respawnTime = new Date(lastKilled.getTime() + boss.respawn_duration * 1000);
+                const remaining = Math.floor((respawnTime - now) / 1000);
+
+                if (remaining > 0) {
+                    timerDisplay.textContent = formatTime(remaining);
+                    
+                    if (remaining <= 180) { // 3 minutos de advertencia
+                        timerDisplay.className = 'timer-display timer-warning';
+                        statusDisplay.textContent = '⚠️ ¡Por respawnear!';
+                        statusDisplay.className = 'status status-warning';
+                        if (!alertShown[boss.boss_name]) {
+                            showNotification(`¡Atención! ${boss.boss_name} respawnea en 3 minutos!`);
+                            alertShown[boss.boss_name] = true;
+                        }
+                    } else {
+                        timerDisplay.className = 'timer-display timer-active';
+                        statusDisplay.textContent = '🔄 Respawneando...';
+                        statusDisplay.className = 'status status-respawning';
+                        alertShown[boss.boss_name] = false;
+                    }
+
+                    deathButton.disabled = true;
+
+                } else {
+                    timerDisplay.textContent = '--:--:--';
+                    timerDisplay.className = 'timer-display timer-inactive';
+                    statusDisplay.textContent = '✅ Listo para spawn';
+                    statusDisplay.className = 'status status-ready';
+                    deathButton.disabled = false;
+                    alertShown[boss.boss_name] = false;
+                }
+            } else {
+                timerDisplay.textContent = '--:--:--';
+                timerDisplay.className = 'timer-display timer-inactive';
+                statusDisplay.textContent = '✅ Listo para spawn';
+                statusDisplay.className = 'status status-ready';
+                deathButton.disabled = false;
+            }
+        }
+
+        async function markDeath(bossName, duration) {
+            try {
+                await fetch('/api/boss/kill', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: bossName, duration: duration })
+                });
+                showNotification(`⚔️ ${bossName} marcado como muerto!`);
+                // No necesitamos llamar a fetchAndRenderTimers() aquí,
+                // ya que el setInterval se encarga de eso.
+            } catch (error) {
+                console.error('Error al marcar la muerte:', error);
+                showNotification(`Error: No se pudo marcar la muerte de ${bossName}.`);
+            }
+        }
+
+        function showNotification(message) {
+            const existing = document.querySelector('.notification');
+            if (existing) {
+                existing.remove();
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndRenderTimers();
+            setInterval(() => {
+                fetchAndRenderTimers();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

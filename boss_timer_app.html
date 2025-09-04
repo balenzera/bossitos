@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boss Timer Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .boss-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .boss-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .boss-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .boss-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            text-transform: capitalize;
+        }
+
+        .boss-duration {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .timer-display {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .timer-inactive {
+            background: #f0f0f0;
+            color: #999;
+        }
+
+        .timer-active {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .timer-warning {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+            animation: pulse 1s infinite;
+            box-shadow: 0 4px 15px rgba(255, 152, 0, 0.5);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-death {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .btn-death:hover {
+            background: linear-gradient(45deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-death:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-reset {
+            background: linear-gradient(45deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: linear-gradient(45deg, #7f8c8d, #6c7b7d);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .status-ready {
+            color: #27ae60;
+        }
+
+        .status-respawning {
+            color: #3498db;
+        }
+
+        .status-warning {
+            color: #e74c3c;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        .global-controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .btn-global {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2em;
+        }
+
+        .btn-global:hover {
+            background: linear-gradient(45deg, #8e44ad, #7d3c98);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(155, 89, 182, 0.4);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 1000;
+            font-weight: bold;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐉 Boss Timer Tracker</h1>
+        
+        <div class="boss-grid" id="bossGrid">
+            <!-- Los bosses se generarán dinámicamente -->
+        </div>
+
+        <div class="global-controls">
+            <button class="button btn-global" onclick="resetAllTimers()">
+                🔄 Reset Todos los Timers
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const bosses = [
+            { name: 'Gigantus', duration: 2 * 60 * 60 }, // 2 horas
+            { name: 'Corvo', duration: 2 * 60 * 60 },    // 2 horas
+            { name: 'Quimera', duration: 3 * 60 * 60 },  // 3 horas
+            { name: 'Flonebe', duration: 3 * 60 * 60 },  // 3 horas
+            { name: 'Gyes', duration: 4 * 60 * 60 },     // 4 horas
+            { name: 'Lindwurm', duration: 4 * 60 * 60 }, // 4 horas
+            { name: 'Thrandir', duration: 5 * 60 * 60 }  // 5 horas
+        ];
+
+        let timers = {};
+        let intervals = {};
+        let audioContext;
+        let alertShown = {};
+
+        // Inicializar audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Crear sonido de alarma
+        function playAlarm() {
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Formatear tiempo
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Inicializar timers
+        function initializeTimers() {
+            bosses.forEach(boss => {
+                timers[boss.name] = {
+                    remaining: 0,
+                    active: false,
+                    duration: boss.duration
+                };
+                alertShown[boss.name] = false;
+            });
+        }
+
+        // Crear HTML para cada boss
+        function createBossHTML() {
+            const grid = document.getElementById('bossGrid');
+            
+            bosses.forEach(boss => {
+                const bossCard = document.createElement('div');
+                bossCard.className = 'boss-card';
+                bossCard.innerHTML = `
+                    <div class="boss-name">${boss.name}</div>
+                    <div class="boss-duration">Respawn: ${boss.duration / 3600}h</div>
+                    <div class="timer-display timer-inactive" id="timer-${boss.name}">
+                        --:--:--
+                    </div>
+                    <div class="button-group">
+                        <button class="button btn-death" onclick="markDeath('${boss.name}')" id="btn-${boss.name}">
+                            ⚔️ Marcar Muerte
+                        </button>
+                        <button class="button btn-reset" onclick="resetTimer('${boss.name}')">
+                            🔄 Reset
+                        </button>
+                    </div>
+                    <div class="status status-ready" id="status-${boss.name}">
+                        Listo para spawn
+                    </div>
+                `;
+                grid.appendChild(bossCard);
+            });
+        }
+
+        // Marcar muerte de boss
+        function markDeath(bossName) {
+            // Permitir interacción de audio
+            initAudio();
+            
+            const timer = timers[bossName];
+            timer.remaining = timer.duration - (5 * 60); // 5 minutos antes
+            timer.active = true;
+            alertShown[bossName] = false;
+            
+            updateBossDisplay(bossName);
+            
+            // Iniciar intervalo
+            if (intervals[bossName]) {
+                clearInterval(intervals[bossName]);
+            }
+            
+            intervals[bossName] = setInterval(() => {
+                updateTimer(bossName);
+            }, 1000);
+            
+            showNotification(`${bossName} marcado como muerto! Timer iniciado.`);
+        }
+
+        // Actualizar timer
+        function updateTimer(bossName) {
+            const timer = timers[bossName];
+            
+            if (!timer.active || timer.remaining <= 0) {
+                // Timer terminado
+                timer.active = false;
+                timer.remaining = 0;
+                clearInterval(intervals[bossName]);
+                updateBossDisplay(bossName);
+                
+                // Reproducir alarma final
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => playAlarm(), i * 200);
+                }
+                
+                showNotification(`¡${bossName} está por respawnear! ¡Ve ahora!`);
+                return;
+            }
+            
+            // Verificar si quedan 3 minutos (180 segundos)
+            if (timer.remaining <= 180 && !alertShown[bossName]) {
+                alertShown[bossName] = true;
+                
+                // Reproducir alarma de advertencia
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => playAlarm(), i * 150);
+                }
+                
+                showNotification(`¡Atención! ${bossName} respawnea en 3 minutos!`);
+            }
+            
+            timer.remaining--;
+            updateBossDisplay(bossName);
+        }
+
+        // Actualizar display del boss
+        function updateBossDisplay(bossName) {
+            const timer = timers[bossName];
+            const timerDisplay = document.getElementById(`timer-${bossName}`);
+            const button = document.getElementById(`btn-${bossName}`);
+            const status = document.getElementById(`status-${bossName}`);
+            
+            if (timer.active && timer.remaining > 0) {
+                timerDisplay.textContent = formatTime(timer.remaining);
+                
+                if (timer.remaining <= 180) {
+                    timerDisplay.className = 'timer-display timer-warning';
+                    status.textContent = '⚠️ ¡Por respawnear!';
+                    status.className = 'status status-warning';
+                } else {
+                    timerDisplay.className = 'timer-display timer-active';
+                    status.textContent = '🔄 Respawneando...';
+                    status.className = 'status status-respawning';
+                }
+                
+                button.textContent = '⏳ Respawneando';
+                button.disabled = true;
+            } else {
+                timerDisplay.textContent = '--:--:--';
+                timerDisplay.className = 'timer-display timer-inactive';
+                button.textContent = '⚔️ Marcar Muerte';
+                button.disabled = false;
+                status.textContent = '✅ Listo para spawn';
+                status.className = 'status status-ready';
+            }
+        }
+
+        // Reset individual
+        function resetTimer(bossName) {
+            const timer = timers[bossName];
+            timer.active = false;
+            timer.remaining = 0;
+            alertShown[bossName] = false;
+            
+            if (intervals[bossName]) {
+                clearInterval(intervals[bossName]);
+            }
+            
+            updateBossDisplay(bossName);
+            showNotification(`Timer de ${bossName} reseteado.`);
+        }
+
+        // Reset todos
+        function resetAllTimers() {
+            bosses.forEach(boss => {
+                resetTimer(boss.name);
+            });
+            showNotification('Todos los timers han sido reseteados.');
+        }
+
+        // Mostrar notificación
+        function showNotification(message) {
+            // Remover notificación anterior
+            const existing = document.querySelector('.notification');
+            if (existing) {
+                existing.remove();
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Inicializar aplicación
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTimers();
+            createBossHTML();
+            
+            bosses.forEach(boss => {
+                updateBossDisplay(boss.name);
+            });
+            
+            console.log('Boss Timer Tracker inicializado correctamente!');
+        });
+    </script>
+</body>
+</html>

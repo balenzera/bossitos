@@ -3,12 +3,16 @@ const path = require('path');
 const { Pool } = require('pg');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render usa el puerto 10000 por defecto
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuración de la base de datos
+// Middleware para servir el archivo HTML principal
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'boss_timer_app.html'));
+});
+
+// Configuración de la base de datos (asegúrate de que esta URL esté en tus variables de entorno de Render)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
@@ -43,6 +47,7 @@ app.post('/api/boss/kill', async (req, res) => {
     }
 });
 
+// Lanza el servidor
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });

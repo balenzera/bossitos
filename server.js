@@ -9,7 +9,7 @@ app.use(express.json());
 
 // Middleware para servir el archivo HTML principal
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'boss_timer_app.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Configuración de la base de datos (asegúrate de que esta URL esté en tus variables de entorno de Render)
@@ -51,3 +51,4 @@ app.post('/api/boss/kill', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
+
